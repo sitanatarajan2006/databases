@@ -40,7 +40,7 @@ def app():
         sender_entry.delete(0, tk.END)
         receiver_entry.delete(0, tk.END)
         item_entry.delete(0, tk.END)
-        window.after(2000, reset_message)  # 2000 ms = 2 seconds
+        window.after(1000, reset_message)
 
 
     def reset_message():
