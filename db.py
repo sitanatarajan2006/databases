@@ -33,3 +33,29 @@ def add_incident(shipment_id, incident_type, incident_description):
     cur.execute("INSERT INTO incidents (shipment_id, incident_type, incident_description) VALUES (?, ?, ?)",(shipment_id, incident_type, incident_description))
     con.commit()
     con.close()
+
+def get_shipments():
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+    cur.execute("SELECT * FROM shipments")
+    records = cur.fetchall()
+    con.close()
+    return records
+
+
+def get_deliveries():
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+    cur.execute("SELECT * FROM deliveries")
+    records = cur.fetchall()
+    con.close()
+    return records
+
+
+def get_incidents():
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+    cur.execute("SELECT * FROM incidents")
+    records = cur.fetchall()
+    con.close()
+    return records
