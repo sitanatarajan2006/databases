@@ -1,12 +1,13 @@
 import tkinter as tk
 from db import add_shipment
 from db import add_delivery
+from db import add_incident
 
 
 def app():
     window = tk.Tk()
     window.title("Database Application")
-    window.geometry("1100x600")
+    window.geometry("1000x600")
 
     left_frame = tk.Frame(window, bg="#003a6b")
     left_frame.pack(side=tk.LEFT, fill=tk.Y)
@@ -21,15 +22,9 @@ def app():
     content_area = tk.Frame(right_frame, bg="#5293bb")
     content_area.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
-    message = tk.Label(content_area, text="Welcome to the Northshore Logistics Database Application", bg="#89cff1", fg="#003a6b", font=("Courier New", 16), padx=20, pady=20)
-    message.pack(pady=20, padx=20, anchor="nw")
-
     def clear_content():
         for widget in content_area.winfo_children():
             widget.destroy()
-
-    def reset_message():
-        message.config(text="Ready")
 
     def home():
         clear_content()
@@ -114,9 +109,44 @@ def app():
 
         tk.Button(form, text="Add Delivery", command=submit_delivery, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
 
+    def show_incidents():
+        clear_content()
+
+        title = tk.Label(content_area, text="Add Incident", bg="#89cff1", fg="#003a6b", font=("Courier New", 16, "bold"), padx=20, pady=10)
+        title.pack(pady=20, padx=20, anchor="nw")
+
+        form = tk.Frame(content_area, bg="#5293bb")
+        form.pack(pady=10, padx=20, anchor="nw")
+
+        tk.Label(form, text="Shipment ID:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        shipment_id_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        shipment_id_entry.pack(pady=5)
+
+        tk.Label(form, text="Incident Type:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        incident_type_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        incident_type_entry.pack(pady=5)
+
+        tk.Label(form, text="Incident Description:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        incident_description_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        incident_description_entry.pack(pady=5)
+
+        def submit_incident():
+            add_incident(shipment_id_entry.get(), incident_type_entry.get(), incident_description_entry.get())
+
+            title.config(text="Incident added")
+
+            shipment_id_entry.delete(0, tk.END)
+            incident_type_entry.delete(0, tk.END)
+            incident_description_entry.delete(0, tk.END)
+
+            window.after(1000, lambda: title.config(text="Add Incident"))
+
+        tk.Button(form, text="Add Incident", command=submit_incident, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
+
     tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
     tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
     tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
+    tk.Button(menu_area, text="Incidents", command=show_incidents, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
 
     def close_app():
         window.destroy()
