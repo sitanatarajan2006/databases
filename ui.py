@@ -3,6 +3,7 @@ import tkinter.ttk as ttk
 from db import add_shipment
 from db import add_delivery
 from db import add_incident
+from db import get_shipment_report
 
 
 def app():
@@ -26,6 +27,12 @@ def app():
     def clear_content():
         for widget in content_area.winfo_children():
             widget.destroy()
+
+    def money_check(value):
+        try:
+            return format(float(value), ".2f")
+        except ValueError:
+            return None
 
     def home():
         clear_content()
@@ -66,8 +73,9 @@ def app():
         surcharge_entry.pack(pady=5)
 
         tk.Label(form, text="Payment Status:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
-        payment_status_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        payment_status_entry = ttk.Combobox(form, values=["Select Payment Status", "Pending", "Fully Paid", "Part Paid", "Not Paid"], font=("Courier New", 12), width=47, state="readonly")
         payment_status_entry.pack(pady=5)
+        payment_status_entry.current(0)
 
         tk.Label(form, text="Delivery Status:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
         delivery_status_entry = ttk.Combobox(form, values=["Select Delivery Status", "Dispatched", "On the way", "Delivered", "Delayed", "Returned"], font=("Courier New", 12), width=47, state="readonly")
@@ -75,7 +83,30 @@ def app():
         delivery_status_entry.current(0)
 
         def submit():
-            add_shipment(order_entry.get(), sender_entry.get(), receiver_entry.get(), item_entry.get(), delivery_status_entry.get(), transport_cost_entry.get(), surcharge_entry.get(), payment_status_entry.get())
+            transport_cost = money_check(transport_cost_entry.get())
+            surcharge = money_check(surcharge_entry.get())
+
+            if not order_entry.get().isdigit():
+                title.config(text="Order number must be numbers only")
+                return
+
+            if transport_cost is None:
+                title.config(text="Transport cost must be a valid amount")
+                return
+
+            if surcharge is None:
+                title.config(text="Surcharge must be a valid amount")
+                return
+
+            if payment_status_entry.get() == "Select Payment Status":
+                title.config(text="Select payment status")
+                return
+
+            if delivery_status_entry.get() == "Select Delivery Status":
+                title.config(text="Select delivery status")
+                return
+
+            add_shipment(order_entry.get(), sender_entry.get(), receiver_entry.get(), item_entry.get(), delivery_status_entry.get(), transport_cost, surcharge, payment_status_entry.get())
 
             title.config(text="Shipment added")
 
@@ -85,8 +116,8 @@ def app():
             item_entry.delete(0, tk.END)
             transport_cost_entry.delete(0, tk.END)
             surcharge_entry.delete(0, tk.END)
-            payment_status_entry.delete(0, tk.END)
-            delivery_status_entry.set("Select Delivery Status")
+            payment_status_entry.current(0)
+            delivery_status_entry.current(0)
 
             window.after(1000, lambda: title.config(text="Add Shipment"))
 
@@ -118,6 +149,10 @@ def app():
         route_details_entry.pack(pady=5)
 
         def submit_delivery():
+            if not shipment_id_entry.get().isdigit():
+                title.config(text="Shipment ID must be numbers only")
+                return
+
             add_delivery(shipment_id_entry.get(), delivery_date_entry.get(), assigned_driver_entry.get(), route_details_entry.get())
 
             title.config(text="Delivery added")
@@ -153,6 +188,10 @@ def app():
         incident_description_entry.pack(pady=5)
 
         def submit_incident():
+            if not shipment_id_entry.get().isdigit():
+                title.config(text="Shipment ID must be numbers only")
+                return
+
             add_incident(shipment_id_entry.get(), incident_type_entry.get(), incident_description_entry.get())
 
             title.config(text="Incident added")
