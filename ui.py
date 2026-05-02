@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.ttk as ttk
 from db import add_shipment
 from db import add_delivery
 from db import add_incident
@@ -56,8 +57,25 @@ def app():
         item_entry = tk.Entry(form, width=50, font=("Courier New", 12))
         item_entry.pack(pady=5)
 
+        tk.Label(form, text="Transport Cost:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        transport_cost_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        transport_cost_entry.pack(pady=5)
+
+        tk.Label(form, text="Surcharge:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        surcharge_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        surcharge_entry.pack(pady=5)
+
+        tk.Label(form, text="Payment Status:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        payment_status_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        payment_status_entry.pack(pady=5)
+
+        tk.Label(form, text="Delivery Status:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        delivery_status_entry = ttk.Combobox(form, values=["Select Delivery Status", "Dispatched", "On the way", "Delivered", "Delayed", "Returned"], font=("Courier New", 12), width=47, state="readonly")
+        delivery_status_entry.pack(pady=5)
+        delivery_status_entry.current(0)
+
         def submit():
-            add_shipment(order_entry.get(), sender_entry.get(), receiver_entry.get(), item_entry.get())
+            add_shipment(order_entry.get(), sender_entry.get(), receiver_entry.get(), item_entry.get(), delivery_status_entry.get(), transport_cost_entry.get(), surcharge_entry.get(), payment_status_entry.get())
 
             title.config(text="Shipment added")
 
@@ -65,6 +83,10 @@ def app():
             sender_entry.delete(0, tk.END)
             receiver_entry.delete(0, tk.END)
             item_entry.delete(0, tk.END)
+            transport_cost_entry.delete(0, tk.END)
+            surcharge_entry.delete(0, tk.END)
+            payment_status_entry.delete(0, tk.END)
+            delivery_status_entry.set("Select Delivery Status")
 
             window.after(1000, lambda: title.config(text="Add Shipment"))
 
