@@ -1,20 +1,12 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from db import add_shipment
-from db import add_delivery
-from db import add_incident
-from db import add_inventory
-from db import get_shipments
-from db import get_deliveries
-from db import get_incidents
-from db import get_inventory
-from db import get_full_report
+from db import *
 
 
 def app():
     window = tk.Tk()
     window.title("Database Application")
-    window.geometry("1900x1000")
+    window.geometry("1700x900")
 
     left_frame = tk.Frame(window, bg="#003a6b")
     left_frame.pack(side=tk.LEFT, fill=tk.Y)
@@ -256,6 +248,49 @@ def app():
 
         tk.Button(form, text="Add Inventory", command=submit_inventory, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
 
+    def show_vehicles():
+        clear_content()
+
+        title = tk.Label(content_area, text="Vehicle Management", bg="#89cff1", fg="#003a6b", font=("Courier New", 16, "bold"), padx=20, pady=10)
+        title.pack(pady=20, padx=20, anchor="nw")
+
+        form = tk.Frame(content_area, bg="#5293bb")
+        form.pack(pady=10, padx=20, anchor="nw")
+
+        tk.Label(form, text="Capacity:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        capacity_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        capacity_entry.pack(pady=5)
+
+        tk.Label(form, text="Maintenance Schedule:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        maintenance_schedule_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        maintenance_schedule_entry.pack(pady=5)
+
+        tk.Label(form, text="Availability:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        availability_entry = ttk.Combobox(form, values=["Select Availability", "Available", "In Use", "Unavailable", "Maintenance"], font=("Courier New", 12), width=47, state="readonly")
+        availability_entry.pack(pady=5)
+        availability_entry.current(0)
+
+        def submit_vehicle():
+            if not capacity_entry.get().isdigit():
+                title.config(text="Capacity must be numbers only")
+                return
+
+            if availability_entry.get() == "Select Availability":
+                title.config(text="Select availability")
+                return
+
+            add_vehicle(capacity_entry.get(), maintenance_schedule_entry.get(), availability_entry.get())
+
+            title.config(text="Vehicle added")
+
+            capacity_entry.delete(0, tk.END)
+            maintenance_schedule_entry.delete(0, tk.END)
+            availability_entry.current(0)
+
+            window.after(1000, lambda: title.config(text="Vehicle Management"))
+
+        tk.Button(form, text="Add Vehicle", command=submit_vehicle, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
+
     def show_tables():
         clear_content()
 
@@ -269,11 +304,13 @@ def app():
         deliveries_tab = tk.Frame(notebook, bg="#5293bb")
         incidents_tab = tk.Frame(notebook, bg="#5293bb")
         inventory_tab = tk.Frame(notebook, bg="#5293bb")
+        vehicles_tab = tk.Frame(notebook, bg="#5293bb")
 
         notebook.add(shipments_tab, text="Shipments")
         notebook.add(deliveries_tab, text="Deliveries")
         notebook.add(incidents_tab, text="Incidents")
         notebook.add(inventory_tab, text="Inventory")
+        notebook.add(vehicles_tab, text="Vehicles")
 
         shipment_columns = ("shipment_id", "order_number", "sender_details", "receiver_details", "item_description", "delivery_status", "transport_cost", "surcharge", "payment_status")
         shipment_table = ttk.Treeview(shipments_tab, columns=shipment_columns, show="headings")
@@ -322,6 +359,18 @@ def app():
             inventory_table.insert("", tk.END, values=row)
 
         inventory_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        vehicle_columns = ("vehicle_id", "capacity", "maintenance_schedule", "availability")
+        vehicle_table = ttk.Treeview(vehicles_tab, columns=vehicle_columns, show="headings")
+
+        for column in vehicle_columns:
+            vehicle_table.heading(column, text=column)
+            vehicle_table.column(column, width=180)
+
+        for row in get_vehicles():
+            vehicle_table.insert("", tk.END, values=row)
+
+        vehicle_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
     def show_reports():
         clear_content()
@@ -384,13 +433,14 @@ def app():
 
         tk.Button(form, text="Generate Report", command=generate, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=10)
 
-    tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
-    tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
-    tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
-    tk.Button(menu_area, text="Incidents", command=show_incidents, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
-    tk.Button(menu_area, text="Inventory", command=show_inventory, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
-    tk.Button(menu_area, text="Tables", command=show_tables, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
-    tk.Button(menu_area, text="Reports", command=show_reports, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=20, padx=20)
+    tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
+    tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
+    tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
+    tk.Button(menu_area, text="Incidents", command=show_incidents, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
+    tk.Button(menu_area, text="Inventory", command=show_inventory, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
+    tk.Button(menu_area, text="Vehicles", command=show_vehicles, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
+    tk.Button(menu_area, text="Tables", command=show_tables, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
+    tk.Button(menu_area, text="Reports", command=show_reports, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
 
     def close_app():
         window.destroy()

@@ -13,6 +13,8 @@ def database():
 
     cur.execute("CREATE TABLE IF NOT EXISTS inventory (inventory_id INTEGER PRIMARY KEY, item_name TEXT, quantity INTEGER, reorder_level INTEGER, warehouse_location TEXT)")
 
+    cur.execute("CREATE TABLE IF NOT EXISTS vehicles (vehicle_id INTEGER PRIMARY KEY, capacity INTEGER, maintenance_schedule TEXT, availability TEXT)")
+
     con.commit()
     con.close()
 
@@ -49,6 +51,14 @@ def add_inventory(item_name, quantity, reorder_level, warehouse_location):
     con.close()
 
 
+def add_vehicle(capacity, maintenance_schedule, availability):
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+    cur.execute("INSERT INTO vehicles (capacity, maintenance_schedule, availability) VALUES (?, ?, ?)", (capacity, maintenance_schedule, availability))
+    con.commit()
+    con.close()
+
+
 def get_shipments():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
@@ -80,6 +90,15 @@ def get_inventory():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM inventory")
+    records = cur.fetchall()
+    con.close()
+    return records
+
+
+def get_vehicles():
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+    cur.execute("SELECT * FROM vehicles")
     records = cur.fetchall()
     con.close()
     return records
