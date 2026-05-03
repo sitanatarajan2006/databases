@@ -1,9 +1,12 @@
 import sqlite3
+import hashlib
 
 
 def database():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
+
+    cur.execute("CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, username TEXT, password TEXT, role TEXT)")
 
     cur.execute("CREATE TABLE IF NOT EXISTS shipments (shipment_id INTEGER PRIMARY KEY, order_number TEXT, sender_details TEXT, receiver_details TEXT, item_description TEXT, delivery_status TEXT, transport_cost REAL, surcharge REAL, payment_status TEXT)")
 
@@ -17,8 +20,32 @@ def database():
 
     cur.execute("CREATE TABLE IF NOT EXISTS drivers (driver_id INTEGER PRIMARY KEY, driver_name TEXT, licence_number TEXT, route_history TEXT, shift_assignment TEXT)")
 
+    cur.execute("SELECT * FROM users WHERE username = ?", ("admin",))
+    existing_user = cur.fetchone()
+
+    if existing_user is None:
+        password = hashlib.sha256("admin123".encode()).hexdigest()
+        cur.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", password, "admin"))
+
     con.commit()
     con.close()
+
+
+def check_login(username, password):
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+
+    hashed_password = hashlib.sha256(password.encode()).hexdigest()
+    cur.execute("SELECT role FROM users WHERE username = ? AND password = ?", (username, hashed_password))
+
+    result = cur.fetchone()
+
+    con.close()
+
+    if result:
+        return result[0]
+
+    return None
 
 
 def add_shipment(order_number, sender_details, receiver_details, item_description, delivery_status, transport_cost, surcharge, payment_status):
