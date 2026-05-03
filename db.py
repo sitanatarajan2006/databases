@@ -15,6 +15,8 @@ def database():
 
     cur.execute("CREATE TABLE IF NOT EXISTS vehicles (vehicle_id INTEGER PRIMARY KEY, capacity INTEGER, maintenance_schedule TEXT, availability TEXT)")
 
+    cur.execute("CREATE TABLE IF NOT EXISTS drivers (driver_id INTEGER PRIMARY KEY, driver_name TEXT, licence_number TEXT, route_history TEXT, shift_assignment TEXT)")
+
     con.commit()
     con.close()
 
@@ -59,6 +61,14 @@ def add_vehicle(capacity, maintenance_schedule, availability):
     con.close()
 
 
+def add_driver(driver_name, licence_number, route_history, shift_assignment):
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+    cur.execute("INSERT INTO drivers (driver_name, licence_number, route_history, shift_assignment) VALUES (?, ?, ?, ?)", (driver_name, licence_number, route_history, shift_assignment))
+    con.commit()
+    con.close()
+
+
 def get_shipments():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
@@ -99,6 +109,15 @@ def get_vehicles():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM vehicles")
+    records = cur.fetchall()
+    con.close()
+    return records
+
+
+def get_drivers():
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+    cur.execute("SELECT * FROM drivers")
     records = cur.fetchall()
     con.close()
     return records
