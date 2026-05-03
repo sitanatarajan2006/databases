@@ -1,25 +1,12 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from db import check_login
-from db import add_shipment
-from db import add_delivery
-from db import add_incident
-from db import add_inventory
-from db import add_vehicle
-from db import add_driver
-from db import get_shipments
-from db import get_deliveries
-from db import get_incidents
-from db import get_inventory
-from db import get_vehicles
-from db import get_drivers
-from db import get_full_report
+from db import *
 
 
 def app():
     window = tk.Tk()
     window.title("Database Application")
-    window.geometry("1000x600")
+    window.geometry("1700x900")
 
     logged_in_role = {"role": None}
 
