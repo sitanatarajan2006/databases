@@ -291,6 +291,45 @@ def app():
 
         tk.Button(form, text="Add Vehicle", command=submit_vehicle, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
 
+    def show_drivers():
+        clear_content()
+
+        title = tk.Label(content_area, text="Driver Management", bg="#89cff1", fg="#003a6b", font=("Courier New", 16, "bold"), padx=20, pady=10)
+        title.pack(pady=20, padx=20, anchor="nw")
+
+        form = tk.Frame(content_area, bg="#5293bb")
+        form.pack(pady=10, padx=20, anchor="nw")
+
+        tk.Label(form, text="Driver Name:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        driver_name_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        driver_name_entry.pack(pady=5)
+
+        tk.Label(form, text="Licence Number:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        licence_number_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        licence_number_entry.pack(pady=5)
+
+        tk.Label(form, text="Route History:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        route_history_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        route_history_entry.pack(pady=5)
+
+        tk.Label(form, text="Shift Assignment:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        shift_assignment_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+        shift_assignment_entry.pack(pady=5)
+
+        def submit_driver():
+            add_driver(driver_name_entry.get(), licence_number_entry.get(), route_history_entry.get(), shift_assignment_entry.get())
+
+            title.config(text="Driver added")
+
+            driver_name_entry.delete(0, tk.END)
+            licence_number_entry.delete(0, tk.END)
+            route_history_entry.delete(0, tk.END)
+            shift_assignment_entry.delete(0, tk.END)
+
+            window.after(1000, lambda: title.config(text="Driver Management"))
+
+        tk.Button(form, text="Add Driver", command=submit_driver, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
+
     def show_tables():
         clear_content()
 
@@ -305,12 +344,14 @@ def app():
         incidents_tab = tk.Frame(notebook, bg="#5293bb")
         inventory_tab = tk.Frame(notebook, bg="#5293bb")
         vehicles_tab = tk.Frame(notebook, bg="#5293bb")
+        drivers_tab = tk.Frame(notebook, bg="#5293bb")
 
         notebook.add(shipments_tab, text="Shipments")
         notebook.add(deliveries_tab, text="Deliveries")
         notebook.add(incidents_tab, text="Incidents")
         notebook.add(inventory_tab, text="Inventory")
         notebook.add(vehicles_tab, text="Vehicles")
+        notebook.add(drivers_tab, text="Drivers")
 
         shipment_columns = ("shipment_id", "order_number", "sender_details", "receiver_details", "item_description", "delivery_status", "transport_cost", "surcharge", "payment_status")
         shipment_table = ttk.Treeview(shipments_tab, columns=shipment_columns, show="headings")
@@ -371,6 +412,18 @@ def app():
             vehicle_table.insert("", tk.END, values=row)
 
         vehicle_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        driver_columns = ("driver_id", "driver_name", "licence_number", "route_history", "shift_assignment")
+        driver_table = ttk.Treeview(drivers_tab, columns=driver_columns, show="headings")
+
+        for column in driver_columns:
+            driver_table.heading(column, text=column)
+            driver_table.column(column, width=180)
+
+        for row in get_drivers():
+            driver_table.insert("", tk.END, values=row)
+
+        driver_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
     def show_reports():
         clear_content()
@@ -433,14 +486,15 @@ def app():
 
         tk.Button(form, text="Generate Report", command=generate, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=10)
 
-    tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
-    tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
-    tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
-    tk.Button(menu_area, text="Incidents", command=show_incidents, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
-    tk.Button(menu_area, text="Inventory", command=show_inventory, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
-    tk.Button(menu_area, text="Vehicles", command=show_vehicles, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
-    tk.Button(menu_area, text="Tables", command=show_tables, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
-    tk.Button(menu_area, text="Reports", command=show_reports, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=10, padx=20)
+    tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
+    tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
+    tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
+    tk.Button(menu_area, text="Incidents", command=show_incidents, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
+    tk.Button(menu_area, text="Inventory", command=show_inventory, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
+    tk.Button(menu_area, text="Vehicles", command=show_vehicles, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
+    tk.Button(menu_area, text="Drivers", command=show_drivers, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
+    tk.Button(menu_area, text="Tables", command=show_tables, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
+    tk.Button(menu_area, text="Reports", command=show_reports, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=8, padx=20)
 
     def close_app():
         window.destroy()
