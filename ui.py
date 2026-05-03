@@ -1,12 +1,25 @@
 import tkinter as tk
 import tkinter.ttk as ttk
-from db import *
+from db import check_login
+from db import add_shipment
+from db import add_delivery
+from db import add_incident
+from db import add_inventory
+from db import add_vehicle
+from db import add_driver
+from db import get_shipments
+from db import get_deliveries
+from db import get_incidents
+from db import get_inventory
+from db import get_vehicles
+from db import get_drivers
+from db import get_full_report
 
 
 def app():
     window = tk.Tk()
     window.title("Database Application")
-    window.geometry("1700x900")
+    window.geometry("1000x600")
 
     logged_in_role = {"role": None}
 
@@ -382,91 +395,29 @@ def app():
             notebook = ttk.Notebook(content_area)
             notebook.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
 
-            shipments_tab = tk.Frame(notebook, bg="#5293bb")
-            deliveries_tab = tk.Frame(notebook, bg="#5293bb")
-            incidents_tab = tk.Frame(notebook, bg="#5293bb")
-            inventory_tab = tk.Frame(notebook, bg="#5293bb")
-            vehicles_tab = tk.Frame(notebook, bg="#5293bb")
-            drivers_tab = tk.Frame(notebook, bg="#5293bb")
+            table_details = [
+                ("Shipments", ("shipment_id", "order_number", "sender_details", "receiver_details", "item_description", "delivery_status", "transport_cost", "surcharge", "payment_status"), get_shipments),
+                ("Deliveries", ("delivery_id", "shipment_id", "delivery_date", "assigned_driver", "route_details"), get_deliveries),
+                ("Incidents", ("incident_id", "shipment_id", "incident_type", "incident_description"), get_incidents),
+                ("Inventory", ("inventory_id", "item_name", "quantity", "reorder_level", "warehouse_location"), get_inventory),
+                ("Vehicles", ("vehicle_id", "capacity", "maintenance_schedule", "availability"), get_vehicles),
+                ("Drivers", ("driver_id", "driver_name", "licence_number", "route_history", "shift_assignment"), get_drivers)
+            ]
 
-            notebook.add(shipments_tab, text="Shipments")
-            notebook.add(deliveries_tab, text="Deliveries")
-            notebook.add(incidents_tab, text="Incidents")
-            notebook.add(inventory_tab, text="Inventory")
-            notebook.add(vehicles_tab, text="Vehicles")
-            notebook.add(drivers_tab, text="Drivers")
+            for table_name, columns, data_function in table_details:
+                tab = tk.Frame(notebook, bg="#5293bb")
+                notebook.add(tab, text=table_name)
 
-            shipment_columns = ("shipment_id", "order_number", "sender_details", "receiver_details", "item_description", "delivery_status", "transport_cost", "surcharge", "payment_status")
-            shipment_table = ttk.Treeview(shipments_tab, columns=shipment_columns, show="headings")
+                table = ttk.Treeview(tab, columns=columns, show="headings")
 
-            for column in shipment_columns:
-                shipment_table.heading(column, text=column)
-                shipment_table.column(column, width=140)
+                for column in columns:
+                    table.heading(column, text=column)
+                    table.column(column, width=160)
 
-            for row in get_shipments():
-                shipment_table.insert("", tk.END, values=row)
+                for row in data_function():
+                    table.insert("", tk.END, values=row)
 
-            shipment_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-            delivery_columns = ("delivery_id", "shipment_id", "delivery_date", "assigned_driver", "route_details")
-            delivery_table = ttk.Treeview(deliveries_tab, columns=delivery_columns, show="headings")
-
-            for column in delivery_columns:
-                delivery_table.heading(column, text=column)
-                delivery_table.column(column, width=160)
-
-            for row in get_deliveries():
-                delivery_table.insert("", tk.END, values=row)
-
-            delivery_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-            incident_columns = ("incident_id", "shipment_id", "incident_type", "incident_description")
-            incident_table = ttk.Treeview(incidents_tab, columns=incident_columns, show="headings")
-
-            for column in incident_columns:
-                incident_table.heading(column, text=column)
-                incident_table.column(column, width=180)
-
-            for row in get_incidents():
-                incident_table.insert("", tk.END, values=row)
-
-            incident_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-            inventory_columns = ("inventory_id", "item_name", "quantity", "reorder_level", "warehouse_location")
-            inventory_table = ttk.Treeview(inventory_tab, columns=inventory_columns, show="headings")
-
-            for column in inventory_columns:
-                inventory_table.heading(column, text=column)
-                inventory_table.column(column, width=180)
-
-            for row in get_inventory():
-                inventory_table.insert("", tk.END, values=row)
-
-            inventory_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-            vehicle_columns = ("vehicle_id", "capacity", "maintenance_schedule", "availability")
-            vehicle_table = ttk.Treeview(vehicles_tab, columns=vehicle_columns, show="headings")
-
-            for column in vehicle_columns:
-                vehicle_table.heading(column, text=column)
-                vehicle_table.column(column, width=180)
-
-            for row in get_vehicles():
-                vehicle_table.insert("", tk.END, values=row)
-
-            vehicle_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-            driver_columns = ("driver_id", "driver_name", "licence_number", "route_history", "shift_assignment")
-            driver_table = ttk.Treeview(drivers_tab, columns=driver_columns, show="headings")
-
-            for column in driver_columns:
-                driver_table.heading(column, text=column)
-                driver_table.column(column, width=180)
-
-            for row in get_drivers():
-                driver_table.insert("", tk.END, values=row)
-
-            driver_table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+                table.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         def show_reports():
             clear_content()
@@ -501,29 +452,7 @@ def app():
                     return
 
                 for record in records:
-                    result_box.insert(tk.END, "SHIPMENT DETAILS\n")
-                    result_box.insert(tk.END, "-" * 50 + "\n")
-                    result_box.insert(tk.END, f"Shipment ID: {record[0]}\n")
-                    result_box.insert(tk.END, f"Order Number: {record[1]}\n")
-                    result_box.insert(tk.END, f"Sender: {record[2]}\n")
-                    result_box.insert(tk.END, f"Receiver: {record[3]}\n")
-                    result_box.insert(tk.END, f"Item: {record[4]}\n")
-                    result_box.insert(tk.END, f"Delivery Status: {record[5]}\n")
-                    result_box.insert(tk.END, f"Transport Cost: £{record[6]}\n")
-                    result_box.insert(tk.END, f"Surcharge: £{record[7]}\n")
-                    result_box.insert(tk.END, f"Payment Status: {record[8]}\n\n")
-
-                    result_box.insert(tk.END, "DELIVERY DETAILS\n")
-                    result_box.insert(tk.END, "-" * 50 + "\n")
-                    result_box.insert(tk.END, f"Delivery Date: {record[9]}\n")
-                    result_box.insert(tk.END, f"Assigned Driver: {record[10]}\n")
-                    result_box.insert(tk.END, f"Route Details: {record[11]}\n\n")
-
-                    result_box.insert(tk.END, "INCIDENT DETAILS\n")
-                    result_box.insert(tk.END, "-" * 50 + "\n")
-                    result_box.insert(tk.END, f"Incident Type: {record[12]}\n")
-                    result_box.insert(tk.END, f"Incident Description: {record[13]}\n")
-                    result_box.insert(tk.END, "=" * 70 + "\n\n")
+                    result_box.insert(tk.END, str(record) + "\n\n")
 
                 result_box.config(state=tk.DISABLED)
 
@@ -535,21 +464,49 @@ def app():
 
         home()
 
-        tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Incidents", command=show_incidents, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Inventory", command=show_inventory, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Vehicles", command=show_vehicles, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Drivers", command=show_drivers, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Tables", command=show_tables, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Reports", command=show_reports, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
-        tk.Button(menu_area, text="Logout", command=logout, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2).pack(pady=5, padx=20)
+        home_btn = tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        home_btn.pack(pady=5, padx=20)
 
-    def close_app():
-        window.destroy()
+        shipments_btn = tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        shipments_btn.pack(pady=5, padx=20)
 
-    window.protocol("WM_DELETE_WINDOW", close_app)
+        deliveries_btn = tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        deliveries_btn.pack(pady=5, padx=20)
+
+        incidents_btn = tk.Button(menu_area, text="Incidents", command=show_incidents, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        incidents_btn.pack(pady=5, padx=20)
+
+        inventory_btn = tk.Button(menu_area, text="Inventory", command=show_inventory, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        inventory_btn.pack(pady=5, padx=20)
+
+        vehicles_btn = tk.Button(menu_area, text="Vehicles", command=show_vehicles, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        vehicles_btn.pack(pady=5, padx=20)
+
+        drivers_btn = tk.Button(menu_area, text="Drivers", command=show_drivers, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        drivers_btn.pack(pady=5, padx=20)
+
+        tables_btn = tk.Button(menu_area, text="Tables", command=show_tables, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        tables_btn.pack(pady=5, padx=20)
+
+        reports_btn = tk.Button(menu_area, text="Reports", command=show_reports, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        reports_btn.pack(pady=5, padx=20)
+
+        logout_btn = tk.Button(menu_area, text="Logout", command=logout, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        logout_btn.pack(pady=5, padx=20)
+
+        role = logged_in_role["role"]
+
+        if role == "driver":
+            shipments_btn.config(state="disabled")
+            inventory_btn.config(state="disabled")
+            vehicles_btn.config(state="disabled")
+            drivers_btn.config(state="disabled")
+
+        elif role == "warehouse":
+            vehicles_btn.config(state="disabled")
+            drivers_btn.config(state="disabled")
+
+    window.protocol("WM_DELETE_WINDOW", lambda: window.destroy())
 
     show_login()
 

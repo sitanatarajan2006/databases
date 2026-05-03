@@ -1,5 +1,12 @@
 import sqlite3
 import hashlib
+import logging
+
+logging.basicConfig(filename='system.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+
+def log_action(action):
+    logging.info(action)
 
 
 def database():
@@ -21,30 +28,31 @@ def database():
     cur.execute("CREATE TABLE IF NOT EXISTS drivers (driver_id INTEGER PRIMARY KEY, driver_name TEXT, licence_number TEXT, route_history TEXT, shift_assignment TEXT)")
 
     cur.execute("SELECT * FROM users WHERE username = ?", ("admin",))
-    existing_user = cur.fetchone()
-
-    if existing_user is None:
+    if cur.fetchone() is None:
         password = hashlib.sha256("admin123".encode()).hexdigest()
         cur.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", password, "admin"))
 
     con.commit()
     con.close()
 
+    log_action("Database initialised")
+
 
 def check_login(username, password):
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
 
-    hashed_password = hashlib.sha256(password.encode()).hexdigest()
-    cur.execute("SELECT role FROM users WHERE username = ? AND password = ?", (username, hashed_password))
+    hashed = hashlib.sha256(password.encode()).hexdigest()
+    cur.execute("SELECT role FROM users WHERE username=? AND password=?", (username, hashed))
 
     result = cur.fetchone()
-
     con.close()
 
     if result:
+        log_action(f"Login success: {username}")
         return result[0]
 
+    log_action(f"Login failed: {username}")
     return None
 
 
@@ -54,6 +62,7 @@ def add_shipment(order_number, sender_details, receiver_details, item_descriptio
     cur.execute("INSERT INTO shipments (order_number, sender_details, receiver_details, item_description, delivery_status, transport_cost, surcharge, payment_status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (order_number, sender_details, receiver_details, item_description, delivery_status, transport_cost, surcharge, payment_status))
     con.commit()
     con.close()
+    log_action(f"Shipment added: {order_number}")
 
 
 def add_delivery(shipment_id, delivery_date, assigned_driver, route_details):
@@ -62,6 +71,7 @@ def add_delivery(shipment_id, delivery_date, assigned_driver, route_details):
     cur.execute("INSERT INTO deliveries (shipment_id, delivery_date, assigned_driver, route_details) VALUES (?, ?, ?, ?)", (shipment_id, delivery_date, assigned_driver, route_details))
     con.commit()
     con.close()
+    log_action(f"Delivery added: shipment {shipment_id}")
 
 
 def add_incident(shipment_id, incident_type, incident_description):
@@ -70,6 +80,7 @@ def add_incident(shipment_id, incident_type, incident_description):
     cur.execute("INSERT INTO incidents (shipment_id, incident_type, incident_description) VALUES (?, ?, ?)", (shipment_id, incident_type, incident_description))
     con.commit()
     con.close()
+    log_action(f"Incident added: shipment {shipment_id}")
 
 
 def add_inventory(item_name, quantity, reorder_level, warehouse_location):
@@ -78,6 +89,7 @@ def add_inventory(item_name, quantity, reorder_level, warehouse_location):
     cur.execute("INSERT INTO inventory (item_name, quantity, reorder_level, warehouse_location) VALUES (?, ?, ?, ?)", (item_name, quantity, reorder_level, warehouse_location))
     con.commit()
     con.close()
+    log_action(f"Inventory added: {item_name}")
 
 
 def add_vehicle(capacity, maintenance_schedule, availability):
@@ -86,6 +98,7 @@ def add_vehicle(capacity, maintenance_schedule, availability):
     cur.execute("INSERT INTO vehicles (capacity, maintenance_schedule, availability) VALUES (?, ?, ?)", (capacity, maintenance_schedule, availability))
     con.commit()
     con.close()
+    log_action("Vehicle added")
 
 
 def add_driver(driver_name, licence_number, route_history, shift_assignment):
@@ -94,68 +107,77 @@ def add_driver(driver_name, licence_number, route_history, shift_assignment):
     cur.execute("INSERT INTO drivers (driver_name, licence_number, route_history, shift_assignment) VALUES (?, ?, ?, ?)", (driver_name, licence_number, route_history, shift_assignment))
     con.commit()
     con.close()
+    log_action(f"Driver added: {driver_name}")
 
 
 def get_shipments():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM shipments")
-    records = cur.fetchall()
+    data = cur.fetchall()
     con.close()
-    return records
+    return data
 
 
 def get_deliveries():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM deliveries")
-    records = cur.fetchall()
+    data = cur.fetchall()
     con.close()
-    return records
+    return data
 
 
 def get_incidents():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM incidents")
-    records = cur.fetchall()
+    data = cur.fetchall()
     con.close()
-    return records
+    return data
 
 
 def get_inventory():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM inventory")
-    records = cur.fetchall()
+    data = cur.fetchall()
     con.close()
-    return records
+    return data
 
 
 def get_vehicles():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM vehicles")
-    records = cur.fetchall()
+    data = cur.fetchall()
     con.close()
-    return records
+    return data
 
 
 def get_drivers():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("SELECT * FROM drivers")
-    records = cur.fetchall()
+    data = cur.fetchall()
     con.close()
-    return records
+    return data
 
 
 def get_full_report(shipment_id):
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
 
-    cur.execute("SELECT shipments.shipment_id, shipments.order_number, shipments.sender_details, shipments.receiver_details, shipments.item_description, shipments.delivery_status, shipments.transport_cost, shipments.surcharge, shipments.payment_status, deliveries.delivery_date, deliveries.assigned_driver, deliveries.route_details, incidents.incident_type, incidents.incident_description FROM shipments LEFT JOIN deliveries ON shipments.shipment_id = deliveries.shipment_id LEFT JOIN incidents ON shipments.shipment_id = incidents.shipment_id WHERE shipments.shipment_id = ?", (shipment_id,))
+    cur.execute("""
+    SELECT *
+    FROM shipments
+    LEFT JOIN deliveries ON shipments.shipment_id = deliveries.shipment_id
+    LEFT JOIN incidents ON shipments.shipment_id = incidents.shipment_id
+    WHERE shipments.shipment_id = ?
+    """, (shipment_id,))
 
-    records = cur.fetchall()
+    data = cur.fetchall()
     con.close()
-    return records
+
+    log_action(f"Report generated for shipment {shipment_id}")
+    return data
