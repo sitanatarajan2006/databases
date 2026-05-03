@@ -27,10 +27,18 @@ def database():
 
     cur.execute("CREATE TABLE IF NOT EXISTS drivers (driver_id INTEGER PRIMARY KEY, driver_name TEXT, licence_number TEXT, route_history TEXT, shift_assignment TEXT)")
 
-    cur.execute("SELECT * FROM users WHERE username = ?", ("admin",))
-    if cur.fetchone() is None:
-        password = hashlib.sha256("admin123".encode()).hexdigest()
-        cur.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", ("admin", password, "admin"))
+    users = [
+        ("admin", "admin123", "admin"),
+        ("driver", "driver123", "driver"),
+        ("warehouse", "warehouse123", "warehouse"),
+        ("manager", "manager123", "manager")
+    ]
+
+    for username, password, role in users:
+        hashed = hashlib.sha256(password.encode()).hexdigest()
+        cur.execute("SELECT * FROM users WHERE username = ?", (username,))
+        if cur.fetchone() is None:
+            cur.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", (username, hashed, role))
 
     con.commit()
     con.close()
@@ -43,7 +51,7 @@ def check_login(username, password):
     cur = con.cursor()
 
     hashed = hashlib.sha256(password.encode()).hexdigest()
-    cur.execute("SELECT role FROM users WHERE username=? AND password=?", (username, hashed))
+    cur.execute("SELECT role FROM users WHERE username = ? AND password = ?", (username, hashed))
 
     result = cur.fetchone()
     con.close()
@@ -71,7 +79,7 @@ def add_delivery(shipment_id, delivery_date, assigned_driver, route_details):
     cur.execute("INSERT INTO deliveries (shipment_id, delivery_date, assigned_driver, route_details) VALUES (?, ?, ?, ?)", (shipment_id, delivery_date, assigned_driver, route_details))
     con.commit()
     con.close()
-    log_action(f"Delivery added: shipment {shipment_id}")
+    log_action(f"Delivery added: {shipment_id}")
 
 
 def add_incident(shipment_id, incident_type, incident_description):
@@ -80,7 +88,7 @@ def add_incident(shipment_id, incident_type, incident_description):
     cur.execute("INSERT INTO incidents (shipment_id, incident_type, incident_description) VALUES (?, ?, ?)", (shipment_id, incident_type, incident_description))
     con.commit()
     con.close()
-    log_action(f"Incident added: shipment {shipment_id}")
+    log_action(f"Incident added: {shipment_id}")
 
 
 def add_inventory(item_name, quantity, reorder_level, warehouse_location):
@@ -179,5 +187,5 @@ def get_full_report(shipment_id):
     data = cur.fetchall()
     con.close()
 
-    log_action(f"Report generated for shipment {shipment_id}")
+    log_action(f"Report generated: {shipment_id}")
     return data
