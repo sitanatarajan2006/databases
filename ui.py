@@ -255,6 +255,58 @@ def app():
 
             tk.Button(form, text="Add Shipment", command=submit, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
 
+        def show_shipment_updates():
+            clear_content()
+
+            title = tk.Label(content_area, text="Shipment Update History", bg="#89cff1", fg="#003a6b", font=("Courier New", 16, "bold"), padx=20, pady=10)
+            title.pack(pady=20, padx=20, anchor="nw")
+
+            form = tk.Frame(content_area, bg="#5293bb")
+            form.pack(pady=10, padx=20, anchor="nw")
+
+            tk.Label(form, text="Order Number:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            order_number_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            order_number_entry.pack(pady=5)
+
+            tk.Label(form, text="Update Date:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            update_date_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            update_date_entry.pack(pady=5)
+
+            tk.Label(form, text="Update Status:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            update_status_entry = ttk.Combobox(form, values=["Select Update Status", "Dispatched", "In Transit", "Out for Delivery", "Delayed", "Returned to Warehouse", "Delivered"], font=("Courier New", 12), width=47, state="readonly")
+            update_status_entry.pack(pady=5)
+            update_status_entry.current(0)
+
+            tk.Label(form, text="Update Notes:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            update_notes_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            update_notes_entry.pack(pady=5)
+
+            def submit_update():
+                if order_number_entry.get() == "":
+                    title.config(text="Order number is required")
+                    return
+
+                if update_status_entry.get() == "Select Update Status":
+                    title.config(text="Select update status")
+                    return
+
+                success = add_shipment_update(order_number_entry.get(), update_date_entry.get(), update_status_entry.get(), update_notes_entry.get())
+
+                if not success:
+                    title.config(text="Order number not found")
+                    return
+
+                title.config(text="Shipment update added")
+
+                order_number_entry.delete(0, tk.END)
+                update_date_entry.delete(0, tk.END)
+                update_status_entry.current(0)
+                update_notes_entry.delete(0, tk.END)
+
+                window.after(1000, lambda: title.config(text="Shipment Update History"))
+
+            tk.Button(form, text="Add Update", command=submit_update, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
+
         def show_deliveries():
             clear_content()
 
@@ -264,9 +316,9 @@ def app():
             form = tk.Frame(content_area, bg="#5293bb")
             form.pack(pady=10, padx=20, anchor="nw")
 
-            tk.Label(form, text="Shipment ID:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
-            shipment_id_entry = tk.Entry(form, width=50, font=("Courier New", 12))
-            shipment_id_entry.pack(pady=5)
+            tk.Label(form, text="Order Number:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            order_number_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            order_number_entry.pack(pady=5)
 
             tk.Label(form, text="Delivery Date:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
             delivery_date_entry = tk.Entry(form, width=50, font=("Courier New", 12))
@@ -281,15 +333,19 @@ def app():
             route_details_entry.pack(pady=5)
 
             def submit_delivery():
-                if not shipment_id_entry.get().isdigit():
-                    title.config(text="Shipment ID must be numbers only")
+                if order_number_entry.get() == "":
+                    title.config(text="Order number is required")
                     return
 
-                add_delivery(shipment_id_entry.get(), delivery_date_entry.get(), assigned_driver_entry.get(), route_details_entry.get())
+                success = add_delivery(order_number_entry.get(), delivery_date_entry.get(), assigned_driver_entry.get(), route_details_entry.get())
+
+                if not success:
+                    title.config(text="Order number not found")
+                    return
 
                 title.config(text="Delivery added")
 
-                shipment_id_entry.delete(0, tk.END)
+                order_number_entry.delete(0, tk.END)
                 delivery_date_entry.delete(0, tk.END)
                 assigned_driver_entry.delete(0, tk.END)
                 route_details_entry.delete(0, tk.END)
@@ -307,9 +363,9 @@ def app():
             form = tk.Frame(content_area, bg="#5293bb")
             form.pack(pady=10, padx=20, anchor="nw")
 
-            tk.Label(form, text="Shipment ID:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
-            shipment_id_entry = tk.Entry(form, width=50, font=("Courier New", 12))
-            shipment_id_entry.pack(pady=5)
+            tk.Label(form, text="Order Number:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            order_number_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            order_number_entry.pack(pady=5)
 
             tk.Label(form, text="Incident Type:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
             incident_type_entry = ttk.Combobox(form, values=["Select Incident Type", "Crash", "Transport Delay", "Delivery Delay", "Damaged Goods", "Failed Delivery Attempt", "Route Change", "Other"], font=("Courier New", 12), width=47, state="readonly")
@@ -321,19 +377,23 @@ def app():
             incident_description_entry.pack(pady=5)
 
             def submit_incident():
-                if not shipment_id_entry.get().isdigit():
-                    title.config(text="Shipment ID must be numbers only")
+                if order_number_entry.get() == "":
+                    title.config(text="Order number is required")
                     return
 
                 if incident_type_entry.get() == "Select Incident Type":
                     title.config(text="Select incident type")
                     return
 
-                add_incident(shipment_id_entry.get(), incident_type_entry.get(), incident_description_entry.get())
+                success = add_incident(order_number_entry.get(), incident_type_entry.get(), incident_description_entry.get())
+
+                if not success:
+                    title.config(text="Order number not found")
+                    return
 
                 title.config(text="Incident added")
 
-                shipment_id_entry.delete(0, tk.END)
+                order_number_entry.delete(0, tk.END)
                 incident_type_entry.current(0)
                 incident_description_entry.delete(0, tk.END)
 
@@ -595,8 +655,9 @@ def app():
 
             table_details = [
                 ("Shipments", ("shipment_id", "order_number", "sender_details", "receiver_details", "item_description", "delivery_status", "transport_cost", "surcharge", "payment_status"), get_shipments),
-                ("Deliveries", ("delivery_id", "shipment_id", "delivery_date", "assigned_driver", "route_details"), get_deliveries),
-                ("Incidents", ("incident_id", "shipment_id", "incident_type", "incident_description"), get_incidents),
+                ("Shipment Updates", ("update_id", "order_number", "update_date", "update_status", "update_notes"), get_shipment_updates),
+                ("Deliveries", ("delivery_id", "order_number", "delivery_date", "assigned_driver", "route_details"), get_deliveries),
+                ("Incidents", ("incident_id", "order_number", "incident_type", "incident_description"), get_incidents),
                 ("Inventory", ("inventory_id", "item_name", "quantity", "reorder_level", "warehouse_location"), get_inventory),
                 ("Vehicles", ("vehicle_id", "capacity", "maintenance_schedule", "availability"), get_vehicles),
                 ("Drivers", ("driver_id", "driver_name", "licence_number", "route_history", "shift_assignment"), get_drivers),
@@ -628,9 +689,9 @@ def app():
             form = tk.Frame(content_area, bg="#5293bb")
             form.pack(pady=10, padx=20, anchor="nw")
 
-            tk.Label(form, text="Enter Shipment ID:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
-            shipment_id_entry = tk.Entry(form, width=50, font=("Courier New", 12))
-            shipment_id_entry.pack(pady=5)
+            tk.Label(form, text="Enter Order Number:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            order_number_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            order_number_entry.pack(pady=5)
 
             result_box = tk.Text(content_area, font=("Courier New", 12), bg="#89cff1", fg="#003a6b")
             result_box.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
@@ -639,15 +700,16 @@ def app():
                 result_box.config(state=tk.NORMAL)
                 result_box.delete(1.0, tk.END)
 
-                if not shipment_id_entry.get().isdigit():
-                    title.config(text="Shipment ID must be numbers only")
+                if order_number_entry.get() == "":
+                    title.config(text="Order number is required")
                     result_box.config(state=tk.DISABLED)
                     return
 
-                records = get_full_report(shipment_id_entry.get())
+                records = get_full_report(order_number_entry.get())
+                updates = get_updates_for_order(order_number_entry.get())
 
                 if not records:
-                    result_box.insert(tk.END, "No data found for this shipment ID")
+                    result_box.insert(tk.END, "No data found for this order number")
                     result_box.config(state=tk.DISABLED)
                     return
 
@@ -658,15 +720,25 @@ def app():
 
                 result_box.insert(tk.END, "Shipment Details\n")
                 result_box.insert(tk.END, "-" * 60 + "\n")
-                result_box.insert(tk.END, f"Shipment ID       : {first_record[0]}\n")
                 result_box.insert(tk.END, f"Order Number      : {first_record[1]}\n")
                 result_box.insert(tk.END, f"Sender Details    : {first_record[2]}\n")
                 result_box.insert(tk.END, f"Receiver Details  : {first_record[3]}\n")
                 result_box.insert(tk.END, f"Item Description  : {first_record[4]}\n")
-                result_box.insert(tk.END, f"Delivery Status   : {first_record[5]}\n")
+                result_box.insert(tk.END, f"Current Status    : {first_record[5]}\n")
                 result_box.insert(tk.END, f"Transport Cost    : £{first_record[6]}\n")
                 result_box.insert(tk.END, f"Surcharge         : £{first_record[7]}\n")
                 result_box.insert(tk.END, f"Payment Status    : {first_record[8]}\n\n")
+
+                result_box.insert(tk.END, "Shipment Timeline\n")
+                result_box.insert(tk.END, "-" * 60 + "\n")
+
+                if updates:
+                    for update in updates:
+                        result_box.insert(tk.END, f"Date              : {update[0]}\n")
+                        result_box.insert(tk.END, f"Status            : {update[1]}\n")
+                        result_box.insert(tk.END, f"Notes             : {update[2]}\n\n")
+                else:
+                    result_box.insert(tk.END, "No shipment updates recorded.\n\n")
 
                 result_box.insert(tk.END, "Delivery Details\n")
                 result_box.insert(tk.END, "-" * 60 + "\n")
@@ -718,6 +790,9 @@ def app():
 
         shipments_btn = tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
         shipments_btn.pack(pady=5, padx=20)
+
+        shipment_updates_btn = tk.Button(menu_area, text="Shipment Updates", command=show_shipment_updates, bg="#89cff1", fg="#003a6b", font=("Courier New", 13, "bold"), width=20, height=2)
+        shipment_updates_btn.pack(pady=5, padx=20)
 
         deliveries_btn = tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
         deliveries_btn.pack(pady=5, padx=20)

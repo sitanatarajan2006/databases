@@ -135,6 +135,19 @@ def check_login(username, password):
     return None
 
 
+def get_shipment_id_from_order(order_number):
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+    cur.execute("SELECT shipment_id FROM shipments WHERE order_number = ?", (order_number,))
+    result = cur.fetchone()
+    con.close()
+
+    if result:
+        return result[0]
+
+    return None
+
+
 def add_shipment(order_number, sender_details, receiver_details, item_description, delivery_status, transport_cost, surcharge, payment_status):
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
@@ -154,9 +167,18 @@ def add_shipment(order_number, sender_details, receiver_details, item_descriptio
     log_action(f"Shipment added: {order_number}")
 
 
-def add_shipment_update(shipment_id, update_date, update_status, update_notes):
+def add_shipment_update(order_number, update_date, update_status, update_notes):
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
+
+    cur.execute("SELECT shipment_id FROM shipments WHERE order_number = ?", (order_number,))
+    result = cur.fetchone()
+
+    if not result:
+        con.close()
+        return False
+
+    shipment_id = result[0]
 
     cur.execute("INSERT INTO shipment_updates (shipment_id, update_date, update_status, update_notes) VALUES (?, ?, ?, ?)", (shipment_id, update_date, update_status, update_notes))
 
@@ -165,27 +187,40 @@ def add_shipment_update(shipment_id, update_date, update_status, update_notes):
     con.commit()
     con.close()
 
-    log_action(f"Shipment update added: {shipment_id} - {update_status}")
+    log_action(f"Shipment update added: order {order_number} - {update_status}")
+    return True
 
 
-def add_delivery(shipment_id, delivery_date, assigned_driver, route_details):
+def add_delivery(order_number, delivery_date, assigned_driver, route_details):
+    shipment_id = get_shipment_id_from_order(order_number)
+
+    if shipment_id is None:
+        return False
+
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("INSERT INTO deliveries (shipment_id, delivery_date, assigned_driver, route_details) VALUES (?, ?, ?, ?)", (shipment_id, delivery_date, assigned_driver, route_details))
     con.commit()
     con.close()
 
-    log_action(f"Delivery added: {shipment_id}")
+    log_action(f"Delivery added for order: {order_number}")
+    return True
 
 
-def add_incident(shipment_id, incident_type, incident_description):
+def add_incident(order_number, incident_type, incident_description):
+    shipment_id = get_shipment_id_from_order(order_number)
+
+    if shipment_id is None:
+        return False
+
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
     cur.execute("INSERT INTO incidents (shipment_id, incident_type, incident_description) VALUES (?, ?, ?)", (shipment_id, incident_type, incident_description))
     con.commit()
     con.close()
 
-    log_action(f"Incident added: {shipment_id}")
+    log_action(f"Incident added for order: {order_number}")
+    return True
 
 
 def add_inventory(item_name, quantity, reorder_level, warehouse_location):
@@ -272,16 +307,16 @@ def get_shipments():
 def get_shipment_updates():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
-    cur.execute("SELECT * FROM shipment_updates")
+    cur.execute("SELECT shipment_updates.update_id, shipments.order_number, shipment_updates.update_date, shipment_updates.update_status, shipment_updates.update_notes FROM shipment_updates INNER JOIN shipments ON shipment_updates.shipment_id = shipments.shipment_id")
     data = cur.fetchall()
     con.close()
     return data
 
 
-def get_updates_for_shipment(shipment_id):
+def get_updates_for_order(order_number):
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
-    cur.execute("SELECT update_date, update_status, update_notes FROM shipment_updates WHERE shipment_id = ? ORDER BY update_id", (shipment_id,))
+    cur.execute("SELECT shipment_updates.update_date, shipment_updates.update_status, shipment_updates.update_notes FROM shipment_updates INNER JOIN shipments ON shipment_updates.shipment_id = shipments.shipment_id WHERE shipments.order_number = ? ORDER BY shipment_updates.update_id", (order_number,))
     data = cur.fetchall()
     con.close()
     return data
@@ -290,7 +325,7 @@ def get_updates_for_shipment(shipment_id):
 def get_deliveries():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
-    cur.execute("SELECT * FROM deliveries")
+    cur.execute("SELECT deliveries.delivery_id, shipments.order_number, deliveries.delivery_date, deliveries.assigned_driver, deliveries.route_details FROM deliveries INNER JOIN shipments ON deliveries.shipment_id = shipments.shipment_id")
     data = cur.fetchall()
     con.close()
     return data
@@ -299,7 +334,7 @@ def get_deliveries():
 def get_incidents():
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
-    cur.execute("SELECT * FROM incidents")
+    cur.execute("SELECT incidents.incident_id, shipments.order_number, incidents.incident_type, incidents.incident_description FROM incidents INNER JOIN shipments ON incidents.shipment_id = shipments.shipment_id")
     data = cur.fetchall()
     con.close()
     return data
@@ -373,7 +408,7 @@ def get_users():
     return data
 
 
-def get_full_report(shipment_id):
+def get_full_report(order_number):
     con = sqlite3.connect('northshore.db')
     cur = con.cursor()
 
@@ -396,8 +431,8 @@ def get_full_report(shipment_id):
     FROM shipments
     LEFT JOIN deliveries ON shipments.shipment_id = deliveries.shipment_id
     LEFT JOIN incidents ON shipments.shipment_id = incidents.shipment_id
-    WHERE shipments.shipment_id = ?
-    """, (shipment_id,))
+    WHERE shipments.order_number = ?
+    """, (order_number,))
 
     data = cur.fetchall()
     con.close()
@@ -415,6 +450,6 @@ def get_full_report(shipment_id):
 
         decrypted_data.append(tuple(decrypted_row))
 
-    log_action(f"Report generated: {shipment_id}")
+    log_action(f"Report generated for order: {order_number}")
 
     return decrypted_data
