@@ -453,3 +453,209 @@ def get_full_report(order_number):
     log_action(f"Report generated for order: {order_number}")
 
     return decrypted_data
+
+
+def edit_record(table_name, record_identifier, field_name, new_value):
+    table_data = {
+        "Users": {
+            "table": "users",
+            "key": "user_id",
+            "fields": ["username", "password", "role"]
+        },
+        "Shipments": {
+            "table": "shipments",
+            "key": "order_number",
+            "fields": ["order_number", "sender_details", "receiver_details", "item_description", "delivery_status", "transport_cost", "surcharge", "payment_status"]
+        },
+        "Shipment Updates": {
+            "table": "shipment_updates",
+            "key": "update_id",
+            "fields": ["update_date", "update_status", "update_notes"]
+        },
+        "Deliveries": {
+            "table": "deliveries",
+            "key": "delivery_id",
+            "fields": ["delivery_date", "assigned_driver", "route_details"]
+        },
+        "Incidents": {
+            "table": "incidents",
+            "key": "incident_id",
+            "fields": ["incident_type", "incident_description"]
+        },
+        "Inventory": {
+            "table": "inventory",
+            "key": "inventory_id",
+            "fields": ["item_name", "quantity", "reorder_level", "warehouse_location"]
+        },
+        "Vehicles": {
+            "table": "vehicles",
+            "key": "vehicle_id",
+            "fields": ["capacity", "maintenance_schedule", "availability"]
+        },
+        "Drivers": {
+            "table": "drivers",
+            "key": "driver_id",
+            "fields": ["driver_name", "licence_number", "route_history", "shift_assignment"]
+        },
+        "Warehouse Activity": {
+            "table": "warehouse_logs",
+            "key": "log_id",
+            "fields": ["activity_type", "item_name", "quantity", "source_location", "destination_location", "activity_date"]
+        },
+        "Vehicle Utilisation": {
+            "table": "vehicle_logs",
+            "key": "log_id",
+            "fields": ["vehicle_id", "usage_type", "usage_date", "notes"]
+        }
+    }
+
+    if table_name not in table_data:
+        return False
+
+    selected_table = table_data[table_name]
+
+    if field_name not in selected_table["fields"]:
+        return False
+
+    if table_name == "Users" and field_name == "password":
+        new_value = hashlib.sha256(new_value.encode()).hexdigest()
+
+    if table_name == "Shipments" and field_name in ["sender_details", "receiver_details"]:
+        new_value = encrypt_data(new_value)
+
+    if table_name == "Drivers" and field_name == "licence_number":
+        new_value = encrypt_data(new_value)
+
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+
+    cur.execute(f"UPDATE {selected_table['table']} SET {field_name} = ? WHERE {selected_table['key']} = ?", (new_value, record_identifier))
+
+    changed = cur.rowcount
+
+    con.commit()
+    con.close()
+
+    if changed > 0:
+        log_action(f"Record edited: {table_name} - {record_identifier} - {field_name}")
+        return True
+
+    return False
+
+
+def delete_record(table_name, record_identifier):
+    table_data = {
+        "Users": {
+            "table": "users",
+            "key": "user_id"
+        },
+        "Shipments": {
+            "table": "shipments",
+            "key": "order_number"
+        },
+        "Shipment Updates": {
+            "table": "shipment_updates",
+            "key": "update_id"
+        },
+        "Deliveries": {
+            "table": "deliveries",
+            "key": "delivery_id"
+        },
+        "Incidents": {
+            "table": "incidents",
+            "key": "incident_id"
+        },
+        "Inventory": {
+            "table": "inventory",
+            "key": "inventory_id"
+        },
+        "Vehicles": {
+            "table": "vehicles",
+            "key": "vehicle_id"
+        },
+        "Drivers": {
+            "table": "drivers",
+            "key": "driver_id"
+        },
+        "Warehouse Activity": {
+            "table": "warehouse_logs",
+            "key": "log_id"
+        },
+        "Vehicle Utilisation": {
+            "table": "vehicle_logs",
+            "key": "log_id"
+        }
+    }
+
+    if table_name not in table_data:
+        return False
+
+    selected_table = table_data[table_name]
+
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+
+    if table_name == "Shipments":
+        shipment_id = get_shipment_id_from_order(record_identifier)
+
+        if shipment_id is None:
+            con.close()
+            return False
+
+        cur.execute("DELETE FROM shipment_updates WHERE shipment_id = ?", (shipment_id,))
+        cur.execute("DELETE FROM deliveries WHERE shipment_id = ?", (shipment_id,))
+        cur.execute("DELETE FROM incidents WHERE shipment_id = ?", (shipment_id,))
+        cur.execute("DELETE FROM shipments WHERE shipment_id = ?", (shipment_id,))
+    else:
+        cur.execute(f"DELETE FROM {selected_table['table']} WHERE {selected_table['key']} = ?", (record_identifier,))
+
+    changed = cur.rowcount
+
+    con.commit()
+    con.close()
+
+    if changed > 0:
+        log_action(f"Record deleted: {table_name} - {record_identifier}")
+        return True
+
+    return False
+
+
+def delete_order_history(order_number):
+    shipment_id = get_shipment_id_from_order(order_number)
+
+    if shipment_id is None:
+        return False
+
+    con = sqlite3.connect('northshore.db')
+    cur = con.cursor()
+
+    cur.execute("DELETE FROM shipment_updates WHERE shipment_id = ?", (shipment_id,))
+    cur.execute("DELETE FROM deliveries WHERE shipment_id = ?", (shipment_id,))
+    cur.execute("DELETE FROM incidents WHERE shipment_id = ?", (shipment_id,))
+
+    con.commit()
+    con.close()
+
+    log_action(f"Order history deleted: {order_number}")
+    return True
+
+
+def get_editable_fields(table_name):
+    field_data = {
+        "Users": ["username", "password", "role"],
+        "Shipments": ["order_number", "sender_details", "receiver_details", "item_description", "delivery_status", "transport_cost", "surcharge", "payment_status"],
+        "Shipment Updates": ["update_date", "update_status", "update_notes"],
+        "Deliveries": ["delivery_date", "assigned_driver", "route_details"],
+        "Incidents": ["incident_type", "incident_description"],
+        "Inventory": ["item_name", "quantity", "reorder_level", "warehouse_location"],
+        "Vehicles": ["capacity", "maintenance_schedule", "availability"],
+        "Drivers": ["driver_name", "licence_number", "route_history", "shift_assignment"],
+        "Warehouse Activity": ["activity_type", "item_name", "quantity", "source_location", "destination_location", "activity_date"],
+        "Vehicle Utilisation": ["vehicle_id", "usage_type", "usage_date", "notes"]
+    }
+
+    if table_name in field_data:
+        return field_data[table_name]
+
+    return []

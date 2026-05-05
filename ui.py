@@ -644,6 +644,141 @@ def app():
 
             tk.Button(form, text="Add Utilisation", command=submit_vehicle_utilisation, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
 
+        def show_manage_records():
+            clear_content()
+
+            title = tk.Label(content_area, text="Manage Records", bg="#89cff1", fg="#003a6b", font=("Courier New", 16, "bold"), padx=20, pady=10)
+            title.pack(pady=20, padx=20, anchor="nw")
+
+            form = tk.Frame(content_area, bg="#5293bb")
+            form.pack(pady=10, padx=20, anchor="nw")
+
+            tk.Label(form, text="Table:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            table_entry = ttk.Combobox(form, values=["Select Table", "Users", "Shipments", "Shipment Updates", "Deliveries", "Incidents", "Inventory", "Vehicles", "Drivers", "Warehouse Activity", "Vehicle Utilisation"], font=("Courier New", 12), width=47, state="readonly")
+            table_entry.pack(pady=5)
+            table_entry.current(0)
+
+            tk.Label(form, text="Record Identifier:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            record_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            record_entry.pack(pady=5)
+
+            identifier_note = tk.Label(form, text="Use order number for Shipments. Use row ID for other tables.", bg="#5293bb", fg="#003a6b", font=("Courier New", 10, "bold"))
+            identifier_note.pack(anchor="w", pady=5)
+
+            tk.Label(form, text="Field to Edit:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            field_entry = ttk.Combobox(form, values=["Select Field"], font=("Courier New", 12), width=47, state="readonly")
+            field_entry.pack(pady=5)
+            field_entry.current(0)
+
+            tk.Label(form, text="New Value:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            value_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            value_entry.pack(pady=5)
+
+            tk.Label(form, text="Order Number for Full History Delete:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            history_order_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            history_order_entry.pack(pady=5)
+
+            def update_fields(event):
+                selected_table = table_entry.get()
+
+                if selected_table == "Select Table":
+                    field_entry.config(values=["Select Field"])
+                    field_entry.current(0)
+                    return
+
+                fields = get_editable_fields(selected_table)
+                field_entry.config(values=["Select Field"] + fields)
+                field_entry.current(0)
+
+            table_entry.bind("<<ComboboxSelected>>", update_fields)
+
+            def submit_edit():
+                if table_entry.get() == "Select Table":
+                    title.config(text="Select table")
+                    return
+
+                if record_entry.get() == "":
+                    title.config(text="Enter record identifier")
+                    return
+
+                if field_entry.get() == "Select Field":
+                    title.config(text="Select field to edit")
+                    return
+
+                if value_entry.get() == "":
+                    title.config(text="Enter new value")
+                    return
+
+                success = edit_record(table_entry.get(), record_entry.get(), field_entry.get(), value_entry.get())
+
+                if not success:
+                    title.config(text="Edit failed")
+                    return
+
+                title.config(text="Record edited")
+
+                value_entry.delete(0, tk.END)
+
+                window.after(1000, lambda: title.config(text="Manage Records"))
+
+            def submit_delete_record():
+                if table_entry.get() == "Select Table":
+                    title.config(text="Select table")
+                    return
+
+                if record_entry.get() == "":
+                    title.config(text="Enter record identifier")
+                    return
+
+                success = delete_record(table_entry.get(), record_entry.get())
+
+                if not success:
+                    title.config(text="Delete failed")
+                    return
+
+                title.config(text="Record deleted")
+
+                record_entry.delete(0, tk.END)
+                value_entry.delete(0, tk.END)
+
+                window.after(1000, lambda: title.config(text="Manage Records"))
+
+            def submit_delete_history():
+                if history_order_entry.get() == "":
+                    title.config(text="Enter order number for full history delete")
+                    return
+
+                success = delete_order_history(history_order_entry.get())
+
+                if not success:
+                    title.config(text="Order number not found")
+                    return
+
+                title.config(text="Order history deleted")
+
+                history_order_entry.delete(0, tk.END)
+
+                window.after(1000, lambda: title.config(text="Manage Records"))
+
+            button_row = tk.Frame(form, bg="#5293bb")
+            button_row.pack(pady=15, anchor="w")
+
+            tk.Button(button_row, text="Edit Record", command=submit_edit, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=18).pack(side=tk.LEFT, padx=5)
+            tk.Button(button_row, text="Delete Record", command=submit_delete_record, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=18).pack(side=tk.LEFT, padx=5)
+            tk.Button(button_row, text="Delete History", command=submit_delete_history, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=18).pack(side=tk.LEFT, padx=5)
+
+            help_box = tk.Text(content_area, font=("Courier New", 12), bg="#89cff1", fg="#003a6b", height=10)
+            help_box.pack(fill=tk.X, padx=20, pady=10)
+
+            help_box.insert(tk.END, "Manage Records Guide\n")
+            help_box.insert(tk.END, "-" * 60 + "\n")
+            help_box.insert(tk.END, "Edit Record: changes one existing value without creating history.\n")
+            help_box.insert(tk.END, "Delete Record: removes one selected row. If Shipments is selected, it removes the shipment and linked order records.\n")
+            help_box.insert(tk.END, "Delete History: removes shipment updates, deliveries and incidents for one order number, but keeps the main shipment record.\n")
+            help_box.insert(tk.END, "For Shipments, use the order number as the record identifier.\n")
+            help_box.insert(tk.END, "For other tables, use the row ID shown in the Tables screen.\n")
+            help_box.config(state=tk.DISABLED)
+
         def show_tables():
             clear_content()
 
@@ -783,46 +918,49 @@ def app():
         home()
 
         home_btn = tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        home_btn.pack(pady=5, padx=20)
+        home_btn.pack(pady=4, padx=20)
 
         users_btn = tk.Button(menu_area, text="Users", command=show_users, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        users_btn.pack(pady=5, padx=20)
+        users_btn.pack(pady=4, padx=20)
 
         shipments_btn = tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        shipments_btn.pack(pady=5, padx=20)
+        shipments_btn.pack(pady=4, padx=20)
 
         shipment_updates_btn = tk.Button(menu_area, text="Shipment Updates", command=show_shipment_updates, bg="#89cff1", fg="#003a6b", font=("Courier New", 13, "bold"), width=20, height=2)
-        shipment_updates_btn.pack(pady=5, padx=20)
+        shipment_updates_btn.pack(pady=4, padx=20)
 
         deliveries_btn = tk.Button(menu_area, text="Deliveries", command=show_deliveries, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        deliveries_btn.pack(pady=5, padx=20)
+        deliveries_btn.pack(pady=4, padx=20)
 
         incidents_btn = tk.Button(menu_area, text="Incidents", command=show_incidents, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        incidents_btn.pack(pady=5, padx=20)
+        incidents_btn.pack(pady=4, padx=20)
 
         inventory_btn = tk.Button(menu_area, text="Inventory", command=show_inventory, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        inventory_btn.pack(pady=5, padx=20)
+        inventory_btn.pack(pady=4, padx=20)
 
         vehicles_btn = tk.Button(menu_area, text="Vehicles", command=show_vehicles, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        vehicles_btn.pack(pady=5, padx=20)
+        vehicles_btn.pack(pady=4, padx=20)
 
         drivers_btn = tk.Button(menu_area, text="Drivers", command=show_drivers, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        drivers_btn.pack(pady=5, padx=20)
+        drivers_btn.pack(pady=4, padx=20)
 
         warehouse_activity_btn = tk.Button(menu_area, text="Warehouse Activity", command=show_warehouse_activity, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        warehouse_activity_btn.pack(pady=5, padx=20)
+        warehouse_activity_btn.pack(pady=4, padx=20)
 
         vehicle_utilisation_btn = tk.Button(menu_area, text="Vehicle Utilisation", command=show_vehicle_utilisation, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        vehicle_utilisation_btn.pack(pady=5, padx=20)
+        vehicle_utilisation_btn.pack(pady=4, padx=20)
+
+        manage_records_btn = tk.Button(menu_area, text="Manage Records", command=show_manage_records, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        manage_records_btn.pack(pady=4, padx=20)
 
         tables_btn = tk.Button(menu_area, text="Tables", command=show_tables, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        tables_btn.pack(pady=5, padx=20)
+        tables_btn.pack(pady=4, padx=20)
 
         reports_btn = tk.Button(menu_area, text="Reports", command=show_reports, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        reports_btn.pack(pady=5, padx=20)
+        reports_btn.pack(pady=4, padx=20)
 
         logout_btn = tk.Button(menu_area, text="Logout", command=logout, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
-        logout_btn.pack(pady=5, padx=20)
+        logout_btn.pack(pady=4, padx=20)
 
         role = logged_in_role["role"]
 
@@ -833,6 +971,7 @@ def app():
             vehicles_btn.config(state="disabled")
             drivers_btn.config(state="disabled")
             warehouse_activity_btn.config(state="disabled")
+            manage_records_btn.config(state="disabled")
 
         elif role == "warehouse":
             users_btn.config(state="disabled")
