@@ -1,5 +1,6 @@
 import tkinter as tk
 import tkinter.ttk as ttk
+import sqlite3
 from db import *
 
 
@@ -13,6 +14,36 @@ def app():
     def clear_window():
         for widget in window.winfo_children():
             widget.destroy()
+
+    def show_create_admin():
+        clear_window()
+
+        login_frame = tk.Frame(window, bg="#003a6b")
+        login_frame.pack(fill=tk.BOTH, expand=True)
+
+        login_box = tk.Frame(login_frame, bg="#5293bb", padx=40, pady=40)
+        login_box.pack(expand=True)
+
+        title = tk.Label(login_box, text="Create Admin Account", bg="#89cff1", fg="#003a6b", font=("Courier New", 18, "bold"), padx=20, pady=10)
+        title.pack(pady=20)
+
+        tk.Label(login_box, text="Username:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        username_entry = tk.Entry(login_box, width=40, font=("Courier New", 12))
+        username_entry.pack(pady=5)
+
+        tk.Label(login_box, text="Password:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+        password_entry = tk.Entry(login_box, width=40, font=("Courier New", 12), show="*")
+        password_entry.pack(pady=5)
+
+        def create_admin():
+            if username_entry.get() == "" or password_entry.get() == "":
+                title.config(text="Fill all fields")
+                return
+
+            add_user(username_entry.get(), password_entry.get(), "admin")
+            show_login()
+
+        tk.Button(login_box, text="Create Admin", command=create_admin, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=20)
 
     def show_login():
         clear_window()
@@ -78,6 +109,67 @@ def app():
 
             role_label = tk.Label(content_area, text=f"Logged in as: {logged_in_role['role']}", bg="#89cff1", fg="#003a6b", font=("Courier New", 12), padx=20, pady=10)
             role_label.pack(pady=10, padx=20, anchor="nw")
+
+        def show_users():
+            clear_content()
+
+            title = tk.Label(content_area, text="User Management", bg="#89cff1", fg="#003a6b", font=("Courier New", 16, "bold"), padx=20, pady=10)
+            title.pack(pady=20, padx=20, anchor="nw")
+
+            form = tk.Frame(content_area, bg="#5293bb")
+            form.pack(pady=10, padx=20, anchor="nw")
+
+            tk.Label(form, text="Username:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            username_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            username_entry.pack(pady=5)
+
+            tk.Label(form, text="Password:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            password_entry = tk.Entry(form, width=50, font=("Courier New", 12), show="*")
+            password_entry.pack(pady=5)
+
+            tk.Label(form, text="Role:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            role_entry = ttk.Combobox(form, values=["Select Role", "admin", "manager", "warehouse", "driver"], font=("Courier New", 12), width=47, state="readonly")
+            role_entry.pack(pady=5)
+            role_entry.current(0)
+
+            def submit_user():
+                if username_entry.get() == "":
+                    title.config(text="Username is required")
+                    return
+
+                if password_entry.get() == "":
+                    title.config(text="Password is required")
+                    return
+
+                if role_entry.get() == "Select Role":
+                    title.config(text="Select role")
+                    return
+
+                try:
+                    add_user(username_entry.get(), password_entry.get(), role_entry.get())
+                    title.config(text="User added")
+
+                    username_entry.delete(0, tk.END)
+                    password_entry.delete(0, tk.END)
+                    role_entry.current(0)
+
+                    window.after(1000, lambda: title.config(text="User Management"))
+                except sqlite3.IntegrityError:
+                    title.config(text="Username already exists")
+
+            tk.Button(form, text="Add User", command=submit_user, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
+
+            user_columns = ("user_id", "username", "role")
+            user_table = ttk.Treeview(content_area, columns=user_columns, show="headings")
+
+            for column in user_columns:
+                user_table.heading(column, text=column)
+                user_table.column(column, width=180)
+
+            for row in get_users():
+                user_table.insert("", tk.END, values=row)
+
+            user_table.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
 
         def show_shipments():
             clear_content()
@@ -184,7 +276,7 @@ def app():
             assigned_driver_entry = tk.Entry(form, width=50, font=("Courier New", 12))
             assigned_driver_entry.pack(pady=5)
 
-            tk.Label(form, text="Route Details:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            tk.Label(form, text="Route Details (start - end):", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
             route_details_entry = tk.Entry(form, width=50, font=("Courier New", 12))
             route_details_entry.pack(pady=5)
 
@@ -220,8 +312,9 @@ def app():
             shipment_id_entry.pack(pady=5)
 
             tk.Label(form, text="Incident Type:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
-            incident_type_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            incident_type_entry = ttk.Combobox(form, values=["Select Incident Type", "Crash", "Transport Delay", "Delivery Delay", "Damaged Goods", "Failed Delivery Attempt", "Route Change", "Other"], font=("Courier New", 12), width=47, state="readonly")
             incident_type_entry.pack(pady=5)
+            incident_type_entry.current(0)
 
             tk.Label(form, text="Incident Description:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
             incident_description_entry = tk.Entry(form, width=50, font=("Courier New", 12))
@@ -232,12 +325,16 @@ def app():
                     title.config(text="Shipment ID must be numbers only")
                     return
 
+                if incident_type_entry.get() == "Select Incident Type":
+                    title.config(text="Select incident type")
+                    return
+
                 add_incident(shipment_id_entry.get(), incident_type_entry.get(), incident_description_entry.get())
 
                 title.config(text="Incident added")
 
                 shipment_id_entry.delete(0, tk.END)
-                incident_type_entry.delete(0, tk.END)
+                incident_type_entry.current(0)
                 incident_description_entry.delete(0, tk.END)
 
                 window.after(1000, lambda: title.config(text="Add Incident"))
@@ -300,7 +397,11 @@ def app():
             form = tk.Frame(content_area, bg="#5293bb")
             form.pack(pady=10, padx=20, anchor="nw")
 
-            tk.Label(form, text="Capacity:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            tk.Label(form, text="Vehicle ID:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            vehicle_id_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            vehicle_id_entry.pack(pady=5)
+
+            tk.Label(form, text="Vehicle Capacity (kg):", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
             capacity_entry = tk.Entry(form, width=50, font=("Courier New", 12))
             capacity_entry.pack(pady=5)
 
@@ -314,18 +415,26 @@ def app():
             availability_entry.current(0)
 
             def submit_vehicle():
+                if not vehicle_id_entry.get().isdigit():
+                    title.config(text="Vehicle ID must be numbers only")
+                    return
+
                 if not capacity_entry.get().isdigit():
-                    title.config(text="Capacity must be numbers only")
+                    title.config(text="Vehicle capacity must be numbers only")
                     return
 
                 if availability_entry.get() == "Select Availability":
                     title.config(text="Select availability")
                     return
 
-                add_vehicle(capacity_entry.get(), maintenance_schedule_entry.get(), availability_entry.get())
+                try:
+                    add_vehicle(vehicle_id_entry.get(), capacity_entry.get(), maintenance_schedule_entry.get(), availability_entry.get())
+                    title.config(text="Vehicle added")
+                except sqlite3.IntegrityError:
+                    title.config(text="Vehicle ID already exists")
+                    return
 
-                title.config(text="Vehicle added")
-
+                vehicle_id_entry.delete(0, tk.END)
                 capacity_entry.delete(0, tk.END)
                 maintenance_schedule_entry.delete(0, tk.END)
                 availability_entry.current(0)
@@ -351,27 +460,129 @@ def app():
             licence_number_entry = tk.Entry(form, width=50, font=("Courier New", 12))
             licence_number_entry.pack(pady=5)
 
-            tk.Label(form, text="Route History:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
-            route_history_entry = tk.Entry(form, width=50, font=("Courier New", 12))
-            route_history_entry.pack(pady=5)
-
             tk.Label(form, text="Shift Assignment:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
             shift_assignment_entry = tk.Entry(form, width=50, font=("Courier New", 12))
             shift_assignment_entry.pack(pady=5)
 
             def submit_driver():
-                add_driver(driver_name_entry.get(), licence_number_entry.get(), route_history_entry.get(), shift_assignment_entry.get())
+                route_history = "Recorded through delivery route assignments"
+                add_driver(driver_name_entry.get(), licence_number_entry.get(), route_history, shift_assignment_entry.get())
 
                 title.config(text="Driver added")
 
                 driver_name_entry.delete(0, tk.END)
                 licence_number_entry.delete(0, tk.END)
-                route_history_entry.delete(0, tk.END)
                 shift_assignment_entry.delete(0, tk.END)
 
                 window.after(1000, lambda: title.config(text="Driver Management"))
 
             tk.Button(form, text="Add Driver", command=submit_driver, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
+
+        def show_warehouse_activity():
+            clear_content()
+
+            title = tk.Label(content_area, text="Warehouse Activity", bg="#89cff1", fg="#003a6b", font=("Courier New", 16, "bold"), padx=20, pady=10)
+            title.pack(pady=20, padx=20, anchor="nw")
+
+            form = tk.Frame(content_area, bg="#5293bb")
+            form.pack(pady=10, padx=20, anchor="nw")
+
+            tk.Label(form, text="Activity Type:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            activity_type_entry = ttk.Combobox(form, values=["Select Activity Type", "Inbound", "Outbound", "Restocking", "Item Transfer"], font=("Courier New", 12), width=47, state="readonly")
+            activity_type_entry.pack(pady=5)
+            activity_type_entry.current(0)
+
+            tk.Label(form, text="Item Name:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            item_name_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            item_name_entry.pack(pady=5)
+
+            tk.Label(form, text="Quantity:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            quantity_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            quantity_entry.pack(pady=5)
+
+            tk.Label(form, text="Source Location:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            source_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            source_entry.pack(pady=5)
+
+            tk.Label(form, text="Destination Location:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            destination_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            destination_entry.pack(pady=5)
+
+            tk.Label(form, text="Activity Date:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            activity_date_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            activity_date_entry.pack(pady=5)
+
+            def submit_warehouse_activity():
+                if activity_type_entry.get() == "Select Activity Type":
+                    title.config(text="Select activity type")
+                    return
+
+                if not quantity_entry.get().isdigit():
+                    title.config(text="Quantity must be numbers only")
+                    return
+
+                add_warehouse_log(activity_type_entry.get(), item_name_entry.get(), quantity_entry.get(), source_entry.get(), destination_entry.get(), activity_date_entry.get())
+
+                title.config(text="Warehouse activity added")
+
+                activity_type_entry.current(0)
+                item_name_entry.delete(0, tk.END)
+                quantity_entry.delete(0, tk.END)
+                source_entry.delete(0, tk.END)
+                destination_entry.delete(0, tk.END)
+                activity_date_entry.delete(0, tk.END)
+
+                window.after(1000, lambda: title.config(text="Warehouse Activity"))
+
+            tk.Button(form, text="Add Activity", command=submit_warehouse_activity, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
+
+        def show_vehicle_utilisation():
+            clear_content()
+
+            title = tk.Label(content_area, text="Vehicle Utilisation", bg="#89cff1", fg="#003a6b", font=("Courier New", 16, "bold"), padx=20, pady=10)
+            title.pack(pady=20, padx=20, anchor="nw")
+
+            form = tk.Frame(content_area, bg="#5293bb")
+            form.pack(pady=10, padx=20, anchor="nw")
+
+            tk.Label(form, text="Vehicle ID:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            vehicle_id_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            vehicle_id_entry.pack(pady=5)
+
+            tk.Label(form, text="Usage Type:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            usage_type_entry = ttk.Combobox(form, values=["Select Usage Type", "Delivery", "Collection", "Transfer", "Maintenance"], font=("Courier New", 12), width=47, state="readonly")
+            usage_type_entry.pack(pady=5)
+            usage_type_entry.current(0)
+
+            tk.Label(form, text="Usage Date:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            usage_date_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            usage_date_entry.pack(pady=5)
+
+            tk.Label(form, text="Notes:", bg="#5293bb", fg="#003a6b", font=("Courier New", 12, "bold")).pack(anchor="w")
+            notes_entry = tk.Entry(form, width=50, font=("Courier New", 12))
+            notes_entry.pack(pady=5)
+
+            def submit_vehicle_utilisation():
+                if not vehicle_id_entry.get().isdigit():
+                    title.config(text="Vehicle ID must be numbers only")
+                    return
+
+                if usage_type_entry.get() == "Select Usage Type":
+                    title.config(text="Select usage type")
+                    return
+
+                add_vehicle_log(vehicle_id_entry.get(), usage_type_entry.get(), usage_date_entry.get(), notes_entry.get())
+
+                title.config(text="Vehicle utilisation added")
+
+                vehicle_id_entry.delete(0, tk.END)
+                usage_type_entry.current(0)
+                usage_date_entry.delete(0, tk.END)
+                notes_entry.delete(0, tk.END)
+
+                window.after(1000, lambda: title.config(text="Vehicle Utilisation"))
+
+            tk.Button(form, text="Add Utilisation", command=submit_vehicle_utilisation, bg="#89cff1", fg="#003a6b", font=("Courier New", 12, "bold"), width=20).pack(pady=15)
 
         def show_tables():
             clear_content()
@@ -388,7 +599,9 @@ def app():
                 ("Incidents", ("incident_id", "shipment_id", "incident_type", "incident_description"), get_incidents),
                 ("Inventory", ("inventory_id", "item_name", "quantity", "reorder_level", "warehouse_location"), get_inventory),
                 ("Vehicles", ("vehicle_id", "capacity", "maintenance_schedule", "availability"), get_vehicles),
-                ("Drivers", ("driver_id", "driver_name", "licence_number", "route_history", "shift_assignment"), get_drivers)
+                ("Drivers", ("driver_id", "driver_name", "licence_number", "route_history", "shift_assignment"), get_drivers),
+                ("Warehouse Activity", ("log_id", "activity_type", "item_name", "quantity", "source_location", "destination_location", "activity_date"), get_warehouse_logs),
+                ("Vehicle Utilisation", ("log_id", "vehicle_id", "usage_type", "usage_date", "notes"), get_vehicle_logs)
             ]
 
             for table_name, columns, data_function in table_details:
@@ -438,8 +651,54 @@ def app():
                     result_box.config(state=tk.DISABLED)
                     return
 
+                result_box.insert(tk.END, "NORTHSHORE LOGISTICS SHIPMENT REPORT\n")
+                result_box.insert(tk.END, "=" * 60 + "\n\n")
+
+                first_record = records[0]
+
+                result_box.insert(tk.END, "Shipment Details\n")
+                result_box.insert(tk.END, "-" * 60 + "\n")
+                result_box.insert(tk.END, f"Shipment ID       : {first_record[0]}\n")
+                result_box.insert(tk.END, f"Order Number      : {first_record[1]}\n")
+                result_box.insert(tk.END, f"Sender Details    : {first_record[2]}\n")
+                result_box.insert(tk.END, f"Receiver Details  : {first_record[3]}\n")
+                result_box.insert(tk.END, f"Item Description  : {first_record[4]}\n")
+                result_box.insert(tk.END, f"Delivery Status   : {first_record[5]}\n")
+                result_box.insert(tk.END, f"Transport Cost    : £{first_record[6]}\n")
+                result_box.insert(tk.END, f"Surcharge         : £{first_record[7]}\n")
+                result_box.insert(tk.END, f"Payment Status    : {first_record[8]}\n\n")
+
+                result_box.insert(tk.END, "Delivery Details\n")
+                result_box.insert(tk.END, "-" * 60 + "\n")
+
+                delivery_found = False
+
                 for record in records:
-                    result_box.insert(tk.END, str(record) + "\n\n")
+                    if record[9] is not None:
+                        delivery_found = True
+                        result_box.insert(tk.END, f"Delivery Date     : {record[9]}\n")
+                        result_box.insert(tk.END, f"Assigned Driver   : {record[10]}\n")
+                        result_box.insert(tk.END, f"Route Details     : {record[11]}\n\n")
+
+                if not delivery_found:
+                    result_box.insert(tk.END, "No delivery details recorded.\n\n")
+
+                result_box.insert(tk.END, "Incident Details\n")
+                result_box.insert(tk.END, "-" * 60 + "\n")
+
+                incident_found = False
+
+                for record in records:
+                    if record[12] is not None:
+                        incident_found = True
+                        result_box.insert(tk.END, f"Incident Type     : {record[12]}\n")
+                        result_box.insert(tk.END, f"Description       : {record[13]}\n\n")
+
+                if not incident_found:
+                    result_box.insert(tk.END, "No incidents recorded.\n\n")
+
+                result_box.insert(tk.END, "=" * 60 + "\n")
+                result_box.insert(tk.END, "End of report")
 
                 result_box.config(state=tk.DISABLED)
 
@@ -453,6 +712,9 @@ def app():
 
         home_btn = tk.Button(menu_area, text="Home", command=home, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
         home_btn.pack(pady=5, padx=20)
+
+        users_btn = tk.Button(menu_area, text="Users", command=show_users, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        users_btn.pack(pady=5, padx=20)
 
         shipments_btn = tk.Button(menu_area, text="Shipments", command=show_shipments, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
         shipments_btn.pack(pady=5, padx=20)
@@ -472,6 +734,12 @@ def app():
         drivers_btn = tk.Button(menu_area, text="Drivers", command=show_drivers, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
         drivers_btn.pack(pady=5, padx=20)
 
+        warehouse_activity_btn = tk.Button(menu_area, text="Warehouse Activity", command=show_warehouse_activity, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        warehouse_activity_btn.pack(pady=5, padx=20)
+
+        vehicle_utilisation_btn = tk.Button(menu_area, text="Vehicle Utilisation", command=show_vehicle_utilisation, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
+        vehicle_utilisation_btn.pack(pady=5, padx=20)
+
         tables_btn = tk.Button(menu_area, text="Tables", command=show_tables, bg="#89cff1", fg="#003a6b", font=("Courier New", 14, "bold"), width=20, height=2)
         tables_btn.pack(pady=5, padx=20)
 
@@ -484,17 +752,27 @@ def app():
         role = logged_in_role["role"]
 
         if role == "driver":
+            users_btn.config(state="disabled")
             shipments_btn.config(state="disabled")
             inventory_btn.config(state="disabled")
             vehicles_btn.config(state="disabled")
             drivers_btn.config(state="disabled")
+            warehouse_activity_btn.config(state="disabled")
 
         elif role == "warehouse":
+            users_btn.config(state="disabled")
             vehicles_btn.config(state="disabled")
             drivers_btn.config(state="disabled")
+            vehicle_utilisation_btn.config(state="disabled")
+
+        elif role == "manager":
+            users_btn.config(state="disabled")
 
     window.protocol("WM_DELETE_WINDOW", lambda: window.destroy())
 
-    show_login()
+    if users_exist():
+        show_login()
+    else:
+        show_create_admin()
 
     window.mainloop()
